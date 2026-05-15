@@ -1,0 +1,7 @@
+# Common
+/target
+
+# Eclipse
+.classpath
+.project
+.settings
