@@ -44,7 +44,7 @@ import org.jspecify.annotations.Nullable;
  */
 @NullMarked
 public class ContainerDocument implements Closeable {
-	private static final byte[] SIGNATURE = "NaharaContainer1".getBytes(StandardCharsets.UTF_8);
+	/* package-private */ static final byte[] SIGNATURE = "NaharaContainer1".getBytes(StandardCharsets.UTF_8);
 	public static final int NAMESPACE_SIZE = 63; // 1 byte for namespace size
 	public static final int ALIGNMENT = 16;
 
