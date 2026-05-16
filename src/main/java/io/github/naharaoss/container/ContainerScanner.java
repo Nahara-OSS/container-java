@@ -50,8 +50,8 @@ public class ContainerScanner implements Closeable {
 			throw new IOException("Signature is invalid");
 		}
 
-		if (namespace.length > 63) {
-			throw new IOException("Namespace length is greater than 63 bytes");
+		if (namespace.length > ContainerDocument.NAMESPACE_SIZE) {
+			throw new IOException(String.format("Namespace length is greater than %d bytes", ContainerDocument.NAMESPACE_SIZE));
 		}
 
 		buffer.get(namespace);
