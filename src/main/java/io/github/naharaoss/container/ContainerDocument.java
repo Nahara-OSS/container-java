@@ -9,9 +9,12 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import org.jspecify.annotations.NullMarked;
@@ -232,6 +235,14 @@ public class ContainerDocument implements Closeable {
 
 	public byte[] getNamespace() {
 		return namespace.clone();
+	}
+	
+	public List<Allocation> getAllocations() {
+		return Collections.unmodifiableList(allocations);
+	}
+
+	public Set<Data> getData() {
+		return Collections.unmodifiableSet(dataToAllocation.keySet());
 	}
 
 	/**
