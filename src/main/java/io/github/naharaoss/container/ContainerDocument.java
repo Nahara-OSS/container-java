@@ -260,6 +260,8 @@ public class ContainerDocument implements Closeable {
 	 * @throws IOException 
 	 */
 	public Data allocate(int type, int size) throws IOException {
+		if (size < 0) throw new IllegalArgumentException("Size is negative");
+
 		ByteBuffer buffer = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
 		long newChunkSize = CHUNK_HEADER_SIZE + align(size);
 
@@ -360,6 +362,92 @@ public class ContainerDocument implements Closeable {
 		// Remove trailing
 		while (!allocations.isEmpty() && allocations.get(allocations.size() - 1).data == null) {
 			allocations.remove(allocations.size() - 1);
+		}
+	}
+
+	/**
+	 * <p>
+	 * Attempt to resize existing chunk.
+	 * </p>
+	 *
+	 * <p>
+	 * This method make best attempt at resizing the chunk without moving the
+	 * offset. In case the chunk must be moved (due to lack of empty space),
+	 * the offset from returned chunk information will be different from one
+	 * provided from parameter.
+	 * </p>
+	 *
+	 * @param data The information of existing chunk
+	 * @param newSize New chunk size
+	 * @return New chunk information, replacing the one provided from parameter
+	 * @throws IOException
+	 */
+	public Data resize(Data data, int newSize) throws IOException {
+		Objects.requireNonNull(data, "data cannot be null");
+		if (newSize < 0) throw new IllegalArgumentException("Size is negative");
+		if (data.size == newSize) return data;
+
+		ByteBuffer buffer = ByteBuffer.allocate(CHUNK_HEADER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
+		Allocation allocation = dataToAllocation.get(data);
+		int index = allocations.indexOf(allocation);
+		if (index == -1) throw new IllegalArgumentException("Data is not part of document");
+
+		int newAllocationSize = CHUNK_HEADER_SIZE + align(newSize);
+
+		if (newAllocationSize <= allocation.size) {
+			Data newData = new Data(data.offset, newSize, data.type);
+			allocation = allocation.withData(newData);
+			buffer.clear();
+			buffer.putInt(newData.type);
+			buffer.putInt(newData.size);
+			buffer.flip();
+			channel.position(allocation.offset);
+			ByteChannelUtils.writeFully(channel, buffer);
+
+			if (newAllocationSize < allocation.size) {
+				long shrink = allocation.size - newAllocationSize;
+				allocation = allocation.withSize(newAllocationSize);
+				allocations.set(index, allocation);
+
+				if (index < allocations.size() - 1) {
+					Allocation nextAllocation = allocations.get(index + 1);
+
+					if (nextAllocation.data != null) {
+						nextAllocation = new Allocation(allocation.offset + allocation.size, shrink, null);
+						allocations.add(index + 1, nextAllocation);
+					} else {
+						nextAllocation = nextAllocation.withOffset(nextAllocation.offset - shrink).withSize(nextAllocation.size + shrink);
+						allocations.set(index + 1, nextAllocation);
+						dataToAllocation.put(newData, nextAllocation);
+					}
+				}
+			}
+
+			dataToAllocation.put(newData, allocation);
+			dataToAllocation.remove(data);
+			return newData;
+		} else if (index < allocations.size() - 1 && allocations.get(index + 1).data == null && allocations.get(index + 1).size >= newAllocationSize - allocation.size) {
+			Data newData = new Data(data.offset, newSize, data.type);
+			Allocation nextAllocation = allocations.get(index + 1);
+			long expand = newAllocationSize - allocation.size;
+
+			buffer.clear();
+			buffer.putInt(newData.type);
+			buffer.putInt(newData.size);
+			buffer.flip();
+			channel.position(allocation.offset);
+			ByteChannelUtils.writeFully(channel, buffer);
+
+			allocation = allocation.withSize(allocation.size + expand).withData(newData);
+			nextAllocation = nextAllocation.withOffset(nextAllocation.offset + expand).withSize(nextAllocation.size - expand);
+			allocations.set(index, allocation);
+			allocations.set(index + 1, nextAllocation);
+			dataToAllocation.put(newData, allocation);
+			dataToAllocation.remove(data);
+			return newData;
+		} else {
+			delete(data);
+			return allocate(data.type, newSize);
 		}
 	}
 
