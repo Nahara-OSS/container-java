@@ -278,7 +278,7 @@ public class ContainerDocument implements Closeable {
 			int nextIndex = indexOfChunk(index, +1);
 
 			buffer.clear();
-			buffer.putLong(0L);
+			buffer.putLong(newAllocation.offset);
 			buffer.flip();
 			channel.position((prevIndex != -1 ? allocations.get(prevIndex).offset : SIGNATURE.length) + 8);
 			ByteChannelUtils.writeFully(channel, buffer);
