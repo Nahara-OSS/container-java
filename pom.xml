@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.naharaoss</groupId>
 	<artifactId>container</artifactId>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<name>Nahara's Container</name>
 	<description>Container format for documents</description>
 
